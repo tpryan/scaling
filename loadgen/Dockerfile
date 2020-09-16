@@ -22,5 +22,3 @@ COPY abrunner /go/bin/abrunner
 RUN chmod +x /go/bin/abrunner
 
 ENTRYPOINT /go/bin/abrunner
-
-EXPOSE 8082

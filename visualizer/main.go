@@ -12,12 +12,11 @@ import (
 )
 
 var (
-	cache        *caching.Cache
-	cacheEnabled = true
-	debug        = true
-	port         = ":8081"
-	instance     = caching.Instance{}
-	environment  = ""
+	cache       *caching.Cache
+	debug       = true
+	port        = ""
+	instance    = caching.Instance{}
+	environment = ""
 )
 
 func main() {
@@ -26,7 +25,12 @@ func main() {
 	redisHost := os.Getenv("REDISHOST")
 	redisPort := os.Getenv("REDISPORT")
 
-	cache, err = caching.NewCache(redisHost, redisPort, cacheEnabled, debug)
+	port = fmt.Sprintf(":%s", os.Getenv("PORT"))
+	if port == ":" {
+		port = ":8080"
+	}
+
+	cache, err = caching.NewCache(redisHost, redisPort, debug)
 	if err != nil {
 		log.Fatal(err)
 	}

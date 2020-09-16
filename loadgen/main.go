@@ -6,15 +6,26 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 
 	"github.com/tpryan/scaling/apitools"
 )
 
+var (
+	port = ""
+)
+
 func main() {
+
+	port = fmt.Sprintf(":%s", os.Getenv("PORT"))
+	if port == ":" {
+		port = ":8080"
+	}
+
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/healthz", handleHealth)
-	if err := http.ListenAndServe(":8082", nil); err != nil {
+	if err := http.ListenAndServe(port, nil); err != nil {
 		log.Fatal(err)
 	}
 }

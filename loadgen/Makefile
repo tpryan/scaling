@@ -24,7 +24,7 @@ build:
 	docker build -t abrunner "$(BASEDIR)/."
 
 serve:
-	docker run --name=abrunner -d -P -p 8082:8082 abrunner
+	docker run --name=abrunner -d -P -p 8082:8080 abrunner
 
 clean:
 	-rm abrunner
