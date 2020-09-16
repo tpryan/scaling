@@ -19,10 +19,9 @@ type RedisPool interface {
 var ErrCacheMiss = fmt.Errorf("item is not in cache")
 
 // NewCache returns an initialized cache ready to go.
-func NewCache(redisHost, redisPort string, enabled, debug bool) (*Cache, error) {
+func NewCache(redisHost, redisPort string, debug bool) (*Cache, error) {
 	c := &Cache{}
 	pool := c.InitPool(redisHost, redisPort)
-	c.enabled = enabled
 	c.redisPool = pool
 	c.debug = debug
 	return c, nil
@@ -58,9 +57,6 @@ func (c Cache) InitPool(redisHost, redisPort string) RedisPool {
 
 // Clear removes all items from the cache.
 func (c Cache) Clear() error {
-	if !c.enabled {
-		return nil
-	}
 	conn := c.redisPool.Get()
 	defer conn.Close()
 
@@ -72,9 +68,6 @@ func (c Cache) Clear() error {
 
 // Record a hit in redis
 func (c Cache) Record(instance Instance) error {
-	if !c.enabled {
-		return nil
-	}
 
 	conn := c.redisPool.Get()
 	defer conn.Close()
@@ -96,15 +89,24 @@ func (c Cache) Record(instance Instance) error {
 	return nil
 }
 
+// RegisterNode registers a load producing node.
+func (c Cache) RegisterNode(ip string) error {
+
+	conn := c.redisPool.Get()
+	defer conn.Close()
+
+	if _, err := conn.Do("HSET", "loadnodes", ip, ip); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Index returns the whole collection of all of the instances
 func (c Cache) Index() (Index, error) {
 	index := Index{}
 	keys := []interface{}{}
 	intkeys := []string{}
-
-	if !c.enabled {
-		return index, nil
-	}
 
 	conn := c.redisPool.Get()
 	defer conn.Close()
@@ -152,6 +154,29 @@ func (c Cache) Index() (Index, error) {
 	c.log("Successfully retrieved index from cache")
 
 	return index, nil
+}
+
+// ListNodes returns the whole collection of all of the load nodes
+func (c Cache) ListNodes() ([]string, error) {
+	keys := []string{}
+
+	conn := c.redisPool.Get()
+	defer conn.Close()
+
+	s, err := redis.StringMap(conn.Do("HGETALL", "loadnodes"))
+	if err == redis.ErrNil {
+		return keys, ErrCacheMiss
+	} else if err != nil {
+		return keys, err
+	}
+
+	for i := range s {
+		keys = append(keys, i)
+	}
+
+	c.log("Successfully retrieved node list from cache")
+
+	return keys, nil
 }
 
 // Instance refers to one record in redis
