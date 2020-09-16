@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -12,16 +13,20 @@ import (
 )
 
 var (
-	cache        *caching.Cache
-	cacheEnabled = true
-	debug        = true
-	port         = ":8080"
-	instance     = caching.Instance{}
-	environment  = ""
+	cache       *caching.Cache
+	debug       = true
+	port        = ""
+	instance    = caching.Instance{}
+	environment = ""
 )
 
 func main() {
 	var err error
+
+	port = fmt.Sprintf(":%s", os.Getenv("PORT"))
+	if port == ":" {
+		port = ":8080"
+	}
 
 	redisHost := os.Getenv("REDISHOST")
 	redisPort := os.Getenv("REDISPORT")
@@ -35,7 +40,7 @@ func main() {
 	instance.Env = environment
 	instance.ID = instanceID
 
-	cache, err = caching.NewCache(redisHost, redisPort, cacheEnabled, debug)
+	cache, err = caching.NewCache(redisHost, redisPort, debug)
 	if err != nil {
 		log.Fatal(err)
 	}
