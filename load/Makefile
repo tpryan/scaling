@@ -1,5 +1,4 @@
 BASEDIR = $(shell pwd)
-REDISNAME = load-redis
 APPNAME = loadreceiver
 
 .DEFAULT_GOAL := app
@@ -14,22 +13,12 @@ build:
 
 serve:
 	docker run --name=$(APPNAME) -e REDISPORT=6379 -e REDISHOST=docker.for.mac.localhost -e SCALE_ENV=Local -d -P -p 8081:8080 $(APPNAME)
-
+	@echo ----------------------------------------------------	
+	@echo Load Running at 127.0.0.1:8081
+	@echo ----------------------------------------------------	
+		
 clean:
 	-rm $(APPNAME)
 	-docker stop $(APPNAME)
 	-docker rm $(APPNAME)
 	-docker rmi $(APPNAME)
-
-redis: redisclean
-	docker run --name $(REDISNAME) -p 6379:6379 -d redis	
-
-redisclean:
-	-docker stop $(REDISNAME)
-	-docker rm $(REDISNAME)
-
-dev: 
-	(trap 'kill 0' SIGINT; \
-	export REDISHOST=127.0.0.1 && \
-	export REDISPORT=6379 && \
-	go run main.go )			

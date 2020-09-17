@@ -1,15 +1,25 @@
 BASEDIR = $(shell pwd)
 REDISNAME = load-redis
+APPNAME = visualizer
 
-redis: redisclean
-	docker run --name $(REDISNAME) -p 6379:6379 -d redis	
+.DEFAULT_GOAL := app
 
-redisclean:
-	-docker stop $(REDISNAME)
-	-docker rm $(REDISNAME)
+app: clean visualizer build serve
 
-dev: 
-	(trap 'kill 0' SIGINT; \
-	export REDISHOST=127.0.0.1 && \
-	export REDISPORT=6379 && \
-	go run main.go )			
+visualizer:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o visualizer main.go
+
+build:
+	docker build -t $(APPNAME) "$(BASEDIR)/."
+
+serve:
+	docker run --name=$(APPNAME) -e REDISPORT=6379 -e REDISHOST=docker.for.mac.localhost -e SCALE_ENV=Local -d -P -p 8080:8080 $(APPNAME)
+	@echo ----------------------------------------------------	
+	@echo Visualizer Running at 127.0.0.1:8080	
+	@echo ----------------------------------------------------	
+
+clean:
+	-rm $(APPNAME)
+	-docker stop $(APPNAME)
+	-docker rm $(APPNAME)
+	-docker rmi $(APPNAME)
