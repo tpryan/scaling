@@ -24,7 +24,7 @@ build:
 	docker build -t abrunner "$(BASEDIR)/."
 
 serve:
-	docker run --name=abrunner -d -P -p 8082:8080 abrunner
+	docker run --name=abrunner -e REDISPORT=6379 -e REDISHOST=docker.for.mac.localhost -d -P -p 8082:8080 abrunner
 	@echo ----------------------------------------------------	
 	@echo LoadGen Running at 127.0.0.1:8082	
 	@echo ----------------------------------------------------	

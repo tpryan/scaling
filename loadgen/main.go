@@ -8,19 +8,43 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"time"
 
+	"cloud.google.com/go/compute/metadata"
 	"github.com/tpryan/scaling/apitools"
+	"github.com/tpryan/scaling/caching"
 )
 
 var (
-	port = ""
+	cache        *caching.Cache
+	debug        = true
+	port         = ""
+	selfHostName = ""
 )
 
 func main() {
+	var err error
+
+	redisHost := os.Getenv("REDISHOST")
+	redisPort := os.Getenv("REDISPORT")
 
 	port = fmt.Sprintf(":%s", os.Getenv("PORT"))
 	if port == ":" {
 		port = ":8080"
+	}
+
+	cache, err = caching.NewCache(redisHost, redisPort, debug)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	selfHostName, err = getHostIP()
+	if err != nil {
+		selfHostName = "docker.for.mac.localhost"
+	}
+
+	if err := cache.RegisterNode(selfHostName); err != nil {
+		log.Fatal(err)
 	}
 
 	http.HandleFunc("/", indexHandler)
@@ -87,4 +111,27 @@ func writeLog(data []byte, token string) error {
 	name := fmt.Sprintf("/go/src/abrunner/logs/log_%s.log", token)
 	fmt.Printf("Log Printed: %s\n", name)
 	return ioutil.WriteFile(name, data, 0644)
+}
+
+func getHostIP() (string, error) {
+	client := metadata.NewClient(&http.Client{
+		Transport: userAgentTransport{
+			userAgent: "gcprelay-query",
+			base:      http.DefaultTransport,
+		},
+		Timeout: 1 * time.Second})
+
+	return client.ExternalIP()
+}
+
+// userAgentTransport sets the User-Agent header before calling base.
+type userAgentTransport struct {
+	userAgent string
+	base      http.RoundTripper
+}
+
+// RoundTrip implements the http.RoundTripper interface.
+func (t userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Set("User-Agent", t.userAgent)
+	return t.base.RoundTrip(req)
 }
