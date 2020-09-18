@@ -3,7 +3,10 @@ package caching
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"strconv"
 
 	"github.com/gomodule/redigo/redis"
@@ -157,8 +160,8 @@ func (c Cache) Index() (Index, error) {
 }
 
 // ListNodes returns the whole collection of all of the load nodes
-func (c Cache) ListNodes() ([]string, error) {
-	keys := []string{}
+func (c Cache) ListNodes() (InstanceList, error) {
+	keys := InstanceList{}
 
 	conn := c.redisPool.Get()
 	defer conn.Close()
@@ -177,6 +180,61 @@ func (c Cache) ListNodes() ([]string, error) {
 	c.log("Successfully retrieved node list from cache")
 
 	return keys, nil
+}
+
+func (c Cache) Distribute(n, con, urlToHit, token string) (ABResponses, error) {
+	ab := ABResponses{}
+
+	list, err := c.ListNodes()
+
+	if err != nil {
+		return ab, err
+	}
+
+	nint, err := strconv.Atoi(n)
+	if err != nil {
+		return ab, err
+	}
+
+	distCount := nint / len(list)
+
+	for _, v := range list {
+
+		u := fmt.Sprintf("http://%s?n=%d&c=%s&url=%s&token=%s", v, distCount, con, urlToHit, token)
+		fmt.Printf("URL: %s\n", u)
+
+		response, err := http.Get(u)
+		if err != nil {
+			return ab, err
+		}
+
+		defer response.Body.Close()
+
+		resp := ABResponse{}
+		resp.Load(response.Body)
+		fmt.Printf("HTTPResp: %v\n", response)
+		fmt.Printf("Response: %s\n", resp)
+
+		ab = append(ab, resp)
+
+	}
+
+	return ab, nil
+
+}
+
+// InstanceList is a slice of strings that are the Instances
+type InstanceList []string
+
+// JSON Returns the given InstanceList slice as a JSON string
+func (i InstanceList) JSON() (string, error) {
+
+	bytes, err := json.Marshal(i)
+	if err != nil {
+		return "", fmt.Errorf("could not marshal json for response: %s", err)
+	}
+
+	return string(bytes), nil
 }
 
 // Instance refers to one record in redis
@@ -209,6 +267,52 @@ type Index map[string]Instance
 func (i Index) JSON() (string, error) {
 
 	bytes, err := json.Marshal(i)
+	if err != nil {
+		return "", fmt.Errorf("could not marshal json for response: %s", err)
+	}
+
+	return string(bytes), nil
+}
+
+// ABResponse the response from Apache Bench
+type ABResponse struct {
+	Token  string
+	IP     string
+	Status string
+}
+
+// JSON Returns the given ABResponse struct as a JSON string
+func (a ABResponse) JSON() (string, error) {
+
+	bytes, err := json.Marshal(a)
+	if err != nil {
+		return "", fmt.Errorf("could not marshal json for response: %s", err)
+	}
+
+	return string(bytes), nil
+}
+
+func (a *ABResponse) Load(r io.Reader) error {
+
+	bodyBytes, err := ioutil.ReadAll(r)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := json.Unmarshal(bodyBytes, a); err != nil {
+		return fmt.Errorf("could not marshal json for response: %s", err)
+	}
+
+	return nil
+}
+
+// ABResponses is a list of ABResponses
+type ABResponses []ABResponse
+
+// JSON Returns the given ABResponse struct as a JSON string
+func (a ABResponses) JSON() (string, error) {
+
+	bytes, err := json.Marshal(a)
 	if err != nil {
 		return "", fmt.Errorf("could not marshal json for response: %s", err)
 	}

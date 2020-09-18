@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -38,7 +39,9 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/healthz", handleHealth)
 	r.HandleFunc("/api/index", handleIndex)
+	r.HandleFunc("/api/nodelist", handleNodeList)
 	r.HandleFunc("/api/clear", handleClear)
+	r.HandleFunc("/api/distribute", handleDistribute)
 	r.HandleFunc("/", handleIndex)
 
 	http.Handle("/", r)
@@ -65,6 +68,18 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func handleNodeList(w http.ResponseWriter, r *http.Request) {
+
+	list, err := cache.ListNodes()
+	if err != nil {
+		fmt.Printf("%s\n", err)
+	}
+
+	apitools.JSON(w, list)
+
+	return
+}
+
 func handleClear(w http.ResponseWriter, r *http.Request) {
 
 	if err := cache.Clear(); err != nil {
@@ -72,6 +87,38 @@ func handleClear(w http.ResponseWriter, r *http.Request) {
 	}
 
 	apitools.Success(w, "cleared")
+
+	return
+}
+
+func handleDistribute(w http.ResponseWriter, r *http.Request) {
+
+	token := r.URL.Query().Get("token")
+	n := r.URL.Query().Get("n")
+	c := r.URL.Query().Get("c")
+	urltohit := r.URL.Query().Get("url")
+
+	if len(n) == 0 {
+		apitools.Error(w, errors.New("n request variable not set"))
+		return
+	}
+
+	if len(c) == 0 {
+		apitools.Error(w, errors.New("c request variable not set"))
+		return
+	}
+
+	if len(urltohit) == 0 {
+		apitools.Error(w, errors.New("url request variable not set"))
+		return
+	}
+
+	ab, err := cache.Distribute(n, c, urltohit, token)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+	}
+
+	apitools.JSON(w, ab)
 
 	return
 }

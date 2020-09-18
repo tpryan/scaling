@@ -35,22 +35,23 @@ func main() {
 
 	cache, err = caching.NewCache(redisHost, redisPort, debug)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(fmt.Errorf("could not start cache: %w", err))
 	}
 
 	selfHostName, err = getHostIP()
 	if err != nil {
-		selfHostName = "docker.for.mac.localhost"
+		selfHostName = "docker.for.mac.localhost:8082"
 	}
 
 	if err := cache.RegisterNode(selfHostName); err != nil {
-		log.Fatal(err)
+		fmt.Printf("caching issue host: %s port: %s\n", redisHost, redisPort)
+		log.Fatal(fmt.Errorf("could not register the node: %w", err))
 	}
 
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/healthz", handleHealth)
 	if err := http.ListenAndServe(port, nil); err != nil {
-		log.Fatal(err)
+		log.Fatal(fmt.Errorf("could not start webserver: %w", err))
 	}
 }
 
@@ -62,6 +63,7 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 func ab(n, c, u string) ([]byte, error) {
 	args := []string{"-l", "-n", n, "-c", c, "-v", "2", "-q", u}
 	cmd := "ab"
+	fmt.Printf("%s %s\n", cmd, args)
 	return exec.Command(cmd, args...).Output()
 }
 
@@ -91,6 +93,9 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	results, err := ab(n, c, urltohit)
 	if err != nil {
 		if err.Error() == "exit status 22" {
+			fmt.Printf("urltohit: %s\n", urltohit)
+			fmt.Printf("results: %s\n", results)
+			fmt.Printf("error: %s\n", err)
 			apitools.Error(w, fmt.Errorf("might be an issue with env variable `urltohit=%s` ", urltohit))
 			return
 		}
@@ -101,8 +106,9 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		apitools.Error(w, err)
 		return
 	}
-	msg := fmt.Sprintf("success - handled ab for token:%s on ip:%s", token, r.RemoteAddr)
-	apitools.Respond(w, http.StatusOK, msg)
+
+	msg := caching.ABResponse{Token: token, IP: r.RemoteAddr, Status: "success"}
+	apitools.JSON(w, msg)
 	return
 
 }
