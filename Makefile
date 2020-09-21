@@ -1,6 +1,8 @@
 BASEDIR = $(shell pwd)
 REDISNAME = load-redis
 
+.DEFAULT_GOAL := dev
+
 redis: redisclean
 	docker run --name $(REDISNAME) -p 6379:6379 -d redis
 	@echo ----------------------------------------------------	

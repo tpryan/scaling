@@ -18,7 +18,9 @@ FROM debian
 RUN mkdir -p /go/src/visualizer/logs
 RUN mkdir -p /go/bin/
 COPY visualizer /go/bin/visualizer
+COPY static /static
 RUN chmod +x /go/bin/visualizer
+RUN chmod -R 755 /static
 
 ENTRYPOINT /go/bin/visualizer
 

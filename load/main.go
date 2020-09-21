@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/tpryan/apitools"
 	"github.com/tpryan/scaling/caching"
+	"google.golang.org/api/run/v1"
 )
 
 var (
@@ -79,4 +81,19 @@ func getID() (string, error) {
 		return "", err
 	}
 	return b.String(), nil
+}
+
+func getCloudRunURL() (string, error) {
+	ctx := context.Background()
+	runService, err := run.NewService(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	svc, err := runService.Namespaces.Services.Get("loadreceiver").Do()
+	if err != nil {
+		return "", err
+	}
+
+	return svc.Status.Url, nil
 }

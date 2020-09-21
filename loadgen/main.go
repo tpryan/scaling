@@ -122,7 +122,7 @@ func writeLog(data []byte, token string) error {
 func getHostIP() (string, error) {
 	client := metadata.NewClient(&http.Client{
 		Transport: userAgentTransport{
-			userAgent: "gcprelay-query",
+			userAgent: "loadgenerator",
 			base:      http.DefaultTransport,
 		},
 		Timeout: 1 * time.Second})

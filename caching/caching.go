@@ -182,6 +182,7 @@ func (c Cache) ListNodes() (InstanceList, error) {
 	return keys, nil
 }
 
+// Distribute splits the load request among the active load generators
 func (c Cache) Distribute(n, con, urlToHit, token string) (ABResponses, error) {
 	ab := ABResponses{}
 
@@ -196,7 +197,13 @@ func (c Cache) Distribute(n, con, urlToHit, token string) (ABResponses, error) {
 		return ab, err
 	}
 
-	distCount := nint / len(list)
+	listlen := len(list)
+
+	if listlen == 0 {
+		return ab, fmt.Errorf("there are no load nodes registered")
+	}
+
+	distCount := nint / listlen
 
 	for _, v := range list {
 
@@ -212,7 +219,7 @@ func (c Cache) Distribute(n, con, urlToHit, token string) (ABResponses, error) {
 
 		resp := ABResponse{}
 		resp.Load(response.Body)
-		fmt.Printf("HTTPResp: %v\n", response)
+		fmt.Printf("HTTPResp: %v\n", resp)
 		fmt.Printf("Response: %s\n", resp)
 
 		ab = append(ab, resp)
@@ -292,6 +299,7 @@ func (a ABResponse) JSON() (string, error) {
 	return string(bytes), nil
 }
 
+// Load takes the content of a http response and creates a struct of it.
 func (a *ABResponse) Load(r io.Reader) error {
 
 	bodyBytes, err := ioutil.ReadAll(r)
