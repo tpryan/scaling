@@ -1,0 +1,55 @@
+img {
+    filter: grayscale(100%);
+    width: 60px;
+    height: 60px;
+}
+
+.active img{
+    filter: grayscale(0);
+}
+
+main{
+    width: 800px;
+    margin: 0 auto;
+}
+
+.load-generators{
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.load-info{
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.node{
+    border: 1px solid red;
+    margin: 0 5px 0 0;
+    width: 100px;
+    text-align: center;
+}
+
+.node .id{
+    border: 1px solid green;
+    text-align: center;
+}
+
+
+.instance{
+    border: 1px solid red;
+    margin: 0 5px 0 0;
+    width: 100px;
+    text-align: center;
+}
+
+
+.instance .id{
+    border: 1px solid green;
+    text-align: center;
+}
+
+.instance .count{
+    border: 1px solid green;
+    text-align: center;
+}

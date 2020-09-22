@@ -8,9 +8,22 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gomodule/redigo/redis"
+	"github.com/teris-io/shortid"
 )
+
+// CreateID creates a unique ID for operators in this system.
+func CreateID() (string, error) {
+
+	sid, err := shortid.New(1, shortid.DefaultABC, uint64(time.Now().Unix()))
+	if err != nil {
+		return "", err
+	}
+
+	return sid.Generate()
+}
 
 // RedisPool is an interface that allows us to swap in an mock for testing cache
 // code.
@@ -93,12 +106,19 @@ func (c Cache) Record(instance Instance) error {
 }
 
 // RegisterNode registers a load producing node.
-func (c Cache) RegisterNode(ip string) error {
+func (c Cache) RegisterNode(nodeID, ip string, active bool) error {
 
 	conn := c.redisPool.Get()
 	defer conn.Close()
 
-	if _, err := conn.Do("HSET", "loadnodes", ip, ip); err != nil {
+	node := Node{nodeID, ip, active}
+
+	nodestr, err := node.JSON()
+	if err != nil {
+		return err
+	}
+
+	if _, err := conn.Do("HSET", "loadnodes", ip, nodestr); err != nil {
 		return err
 	}
 
@@ -160,8 +180,8 @@ func (c Cache) Index() (Index, error) {
 }
 
 // ListNodes returns the whole collection of all of the load nodes
-func (c Cache) ListNodes() (InstanceList, error) {
-	keys := InstanceList{}
+func (c Cache) ListNodes() (NodeList, error) {
+	keys := NodeList{}
 
 	conn := c.redisPool.Get()
 	defer conn.Close()
@@ -173,8 +193,14 @@ func (c Cache) ListNodes() (InstanceList, error) {
 		return keys, err
 	}
 
-	for i := range s {
-		keys = append(keys, i)
+	for _, v := range s {
+		node := Node{}
+		err := node.Load(v)
+		if err != nil {
+			return keys, err
+		}
+
+		keys = append(keys, node)
 	}
 
 	c.log("Successfully retrieved node list from cache")
@@ -207,7 +233,7 @@ func (c Cache) Distribute(n, con, urlToHit, token string) (ABResponses, error) {
 
 	for _, v := range list {
 
-		u := fmt.Sprintf("http://%s?n=%d&c=%s&url=%s&token=%s", v, distCount, con, urlToHit, token)
+		u := fmt.Sprintf("http://%s?n=%d&c=%s&url=%s&token=%s", v.IP, distCount, con, urlToHit, token)
 		fmt.Printf("URL: %s\n", u)
 
 		response, err := http.Get(u)
@@ -230,11 +256,11 @@ func (c Cache) Distribute(n, con, urlToHit, token string) (ABResponses, error) {
 
 }
 
-// InstanceList is a slice of strings that are the Instances
-type InstanceList []string
+// NodeList is a slice of strings that are the Instances
+type NodeList []Node
 
-// JSON Returns the given InstanceList slice as a JSON string
-func (i InstanceList) JSON() (string, error) {
+// JSON Returns the given NodeList slice as a JSON string
+func (i NodeList) JSON() (string, error) {
 
 	bytes, err := json.Marshal(i)
 	if err != nil {
@@ -326,4 +352,31 @@ func (a ABResponses) JSON() (string, error) {
 	}
 
 	return string(bytes), nil
+}
+
+// Node represents a load generator
+type Node struct {
+	ID     string `json:"id"`
+	IP     string `json:"ip"`
+	Active bool   `json:"active"`
+}
+
+// JSON Returns the given Node slice as a JSON string
+func (n Node) JSON() (string, error) {
+
+	bytes, err := json.Marshal(n)
+	if err != nil {
+		return "", fmt.Errorf("could not marshal json for response: %s", err)
+	}
+
+	return string(bytes), nil
+}
+
+// Load populates a structure with data from json.
+func (n *Node) Load(j string) error {
+
+	if err := json.Unmarshal([]byte(j), n); err != nil {
+		return err
+	}
+	return nil
 }

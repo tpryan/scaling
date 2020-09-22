@@ -35,24 +35,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// r := mux.NewRouter()
-	// r.HandleFunc("/healthz", handleHealth)
-	// r.HandleFunc("/api/index", handleIndex)
-	// r.HandleFunc("/api/nodelist", handleNodeList)
-	// r.HandleFunc("/api/clear", handleClear)
-	// r.HandleFunc("/api/distribute", handleDistribute)
-
-	// fs := wrapHandler(http.FileServer(http.Dir("static")))
-	// r.PathPrefix("/").Handler(fs)
-
-	// http.Handle("/", r)
-
 	http.HandleFunc("/healthz", handleHealth)
 	http.HandleFunc("/api/index", handleIndex)
 	http.HandleFunc("/api/nodelist", handleNodeList)
 	http.HandleFunc("/api/clear", handleClear)
 	http.HandleFunc("/api/distribute", handleDistribute)
-	// http.Handle("/", http.StripPrefix("/static", http.FileServer(http.Dir("./static"))))
 
 	http.Handle("/", http.FileServer(http.Dir("/static")))
 
@@ -132,33 +119,4 @@ func handleDistribute(w http.ResponseWriter, r *http.Request) {
 	apitools.JSON(w, ab)
 
 	return
-}
-
-type notFoundRedirectRespWr struct {
-	http.ResponseWriter // We embed http.ResponseWriter
-	status              int
-}
-
-func (w *notFoundRedirectRespWr) WriteHeader(status int) {
-	w.status = status // Store the status for our own use
-	if status != http.StatusNotFound {
-		w.ResponseWriter.WriteHeader(status)
-	}
-}
-
-func (w *notFoundRedirectRespWr) Write(p []byte) (int, error) {
-	if w.status != http.StatusNotFound {
-		return w.ResponseWriter.Write(p)
-	}
-	return len(p), nil // Lie that we successfully written it
-}
-
-func wrapHandler(h http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		nfrw := &notFoundRedirectRespWr{ResponseWriter: w}
-		h.ServeHTTP(nfrw, r)
-		if nfrw.status == 404 {
-			http.Redirect(w, r, "/index.html", http.StatusFound)
-		}
-	}
 }

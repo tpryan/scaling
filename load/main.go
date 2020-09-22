@@ -6,9 +6,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
-	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
+	"github.com/teris-io/shortid"
 	"github.com/tpryan/apitools"
 	"github.com/tpryan/scaling/caching"
 	"google.golang.org/api/run/v1"
@@ -76,11 +77,13 @@ func handleRecord(w http.ResponseWriter, r *http.Request) {
 }
 
 func getID() (string, error) {
-	b, err := uuid.NewV4()
+
+	sid, err := shortid.New(1, shortid.DefaultABC, uint64(time.Now().Unix()))
 	if err != nil {
 		return "", err
 	}
-	return b.String(), nil
+
+	return sid.Generate()
 }
 
 func getCloudRunURL() (string, error) {

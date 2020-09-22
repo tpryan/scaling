@@ -20,6 +20,8 @@ var (
 	debug        = true
 	port         = ""
 	selfHostName = ""
+	active       = false
+	nodeID       = ""
 )
 
 func main() {
@@ -38,20 +40,37 @@ func main() {
 		log.Fatal(fmt.Errorf("could not start cache: %w", err))
 	}
 
+	nodeID, err = caching.CreateID()
+	if err != nil {
+		log.Fatal(fmt.Errorf("could not create cache id: %w", err))
+	}
+
 	selfHostName, err = getHostIP()
 	if err != nil {
 		selfHostName = "docker.for.mac.localhost:8082"
 	}
 
-	if err := cache.RegisterNode(selfHostName); err != nil {
+	if err := cache.RegisterNode(nodeID, selfHostName, false); err != nil {
 		fmt.Printf("caching issue host: %s port: %s\n", redisHost, redisPort)
 		log.Fatal(fmt.Errorf("could not register the node: %w", err))
 	}
 
+	go startPolling()
+
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/healthz", handleHealth)
+
+	fmt.Printf("starting webserver\n")
 	if err := http.ListenAndServe(port, nil); err != nil {
 		log.Fatal(fmt.Errorf("could not start webserver: %w", err))
+	}
+}
+
+func registerNode() {
+
+	fmt.Printf("registering node\n")
+	if err := cache.RegisterNode(nodeID, selfHostName, active); err != nil {
+		fmt.Printf("could not register node\n")
 	}
 }
 
@@ -60,10 +79,17 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func startPolling() {
+	fmt.Printf("starting register polling\n")
+	for {
+		time.Sleep(1 * time.Second)
+		go registerNode()
+	}
+}
+
 func ab(n, c, u string) ([]byte, error) {
 	args := []string{"-l", "-n", n, "-c", c, "-v", "2", "-q", u}
 	cmd := "ab"
-	fmt.Printf("%s %s\n", cmd, args)
 	return exec.Command(cmd, args...).Output()
 }
 
@@ -90,6 +116,12 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 	urltohit += "?token=" + token
 
+	active = true
+	if err := cache.RegisterNode(nodeID, selfHostName, active); err != nil {
+		apitools.Error(w, err)
+		return
+	}
+
 	results, err := ab(n, c, urltohit)
 	if err != nil {
 		if err.Error() == "exit status 22" {
@@ -102,6 +134,13 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		apitools.Error(w, err)
 		return
 	}
+
+	active = false
+	if err := cache.RegisterNode(nodeID, selfHostName, active); err != nil {
+		apitools.Error(w, err)
+		return
+	}
+
 	if err := writeLog(results, token); err != nil {
 		apitools.Error(w, err)
 		return
@@ -115,7 +154,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 func writeLog(data []byte, token string) error {
 	name := fmt.Sprintf("/go/src/abrunner/logs/log_%s.log", token)
-	fmt.Printf("Log Printed: %s\n", name)
 	return ioutil.WriteFile(name, data, 0644)
 }
 
