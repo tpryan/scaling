@@ -174,8 +174,6 @@ func (c Cache) Index() (Index, error) {
 
 	}
 
-	c.log("Successfully retrieved index from cache")
-
 	return index, nil
 }
 
@@ -203,8 +201,6 @@ func (c Cache) ListNodes() (NodeList, error) {
 		keys = append(keys, node)
 	}
 
-	c.log("Successfully retrieved node list from cache")
-
 	return keys, nil
 }
 
@@ -229,31 +225,51 @@ func (c Cache) Distribute(n, con, urlToHit, token string) (ABResponses, error) {
 		return ab, fmt.Errorf("there are no load nodes registered")
 	}
 
-	distCount := nint / listlen
+	distCount := strconv.Itoa(nint / listlen)
+
+	out := make(chan ABResponse)
+	errs := make(chan error)
 
 	for _, v := range list {
 
-		u := fmt.Sprintf("http://%s?n=%d&c=%s&url=%s&token=%s", v.IP, distCount, con, urlToHit, token)
-		fmt.Printf("URL: %s\n", u)
+		go func(ip, n, concur, url, token string) {
+			resp, err := c.send(ip, n, concur, url, token)
+			if err != nil {
+				errs <- err
+				return
+			}
+			out <- resp
+		}(v.IP, distCount, con, urlToHit, token)
 
-		response, err := http.Get(u)
-		if err != nil {
+	}
+
+	for i := 0; i < listlen; i++ {
+		select {
+		case res := <-out:
+			ab = append(ab, res)
+		case err := <-errs:
 			return ab, err
 		}
-
-		defer response.Body.Close()
-
-		resp := ABResponse{}
-		resp.Load(response.Body)
-		fmt.Printf("HTTPResp: %v\n", resp)
-		fmt.Printf("Response: %s\n", resp)
-
-		ab = append(ab, resp)
-
 	}
 
 	return ab, nil
 
+}
+
+func (c Cache) send(ip, discount, concur, url, token string) (ABResponse, error) {
+	ab := ABResponse{}
+	u := fmt.Sprintf("http://%s?n=%s&c=%s&url=%s&token=%s", ip, discount, concur, url, token)
+
+	response, err := http.Get(u)
+	if err != nil {
+		return ab, err
+	}
+	defer response.Body.Close()
+
+	resp := ABResponse{}
+	resp.Load(response.Body)
+
+	return resp, nil
 }
 
 // NodeList is a slice of strings that are the Instances
@@ -333,7 +349,7 @@ func (a *ABResponse) Load(r io.Reader) error {
 		log.Fatal(err)
 	}
 
-	if err := json.Unmarshal(bodyBytes, a); err != nil {
+	if err := json.Unmarshal(bodyBytes, &a); err != nil {
 		return fmt.Errorf("could not marshal json for response: %s", err)
 	}
 
