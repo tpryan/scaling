@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelector(".send").addEventListener("click", distribute);  
     document.querySelector(".clear").addEventListener("click", clear); 
+    getReceivers();
 
     setInterval(pollLoad, 100);
     setInterval(pollGenerators, 100);
@@ -15,8 +16,14 @@ function distribute() {
             console.log(this.responseText);
          }
     };
-    console.log("Fireing load");
-    xhttp.open("GET", "/api/distribute?n=1000&c=1&url=http://docker.for.mac.localhost:8081/", true);
+
+    var select = document.querySelector("#receiver");
+    var currentOpt = select.options[select.selectedIndex]; 
+    var endpoint = currentOpt.value;
+    var url = `/api/distribute?n=1000&c=1&url=http://${endpoint}/`
+
+
+    xhttp.open("GET", url, true);
     xhttp.setRequestHeader("Content-type", "application/json");
     xhttp.send();
 }
@@ -29,6 +36,20 @@ function pollLoad() {
          }
     };
     xhttp.open("GET", "/api/index", true);
+    xhttp.setRequestHeader("Content-type", "application/json");
+    xhttp.send();
+}
+
+function getReceivers() {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        console.log("got a response")
+        console.log(this.responseText);
+         if (this.readyState == 4 && this.status == 200) {
+            loadReceivers(this.responseText);
+         }
+    };
+    xhttp.open("GET", "/api/receivers", true);
     xhttp.setRequestHeader("Content-type", "application/json");
     xhttp.send();
 }
@@ -46,10 +67,25 @@ function reportLoad(content){
 
 }
 
+function loadReceivers(content){
+    var receivers = JSON.parse(content);
+    var select = document.querySelector("#receiver");
+    console.log(receivers);
+
+    receivers.forEach(receiver => {
+        console.log(receiver);
+        var opt = document.createElement("option");
+        opt.value = receiver.endpoint;
+        opt.text = `${receiver.env} (${receiver.endpoint})  `;
+        select.appendChild(opt);
+    });
+
+
+}
+
 function updateInstance(instance){
 
     var id = "#instance-" + instance.id
-
     var ui = document.querySelector(id);
 
     if (ui != null) {
@@ -60,8 +96,8 @@ function updateInstance(instance){
         var imagePath = "";
 
         switch (envType) {
-            case "local":
-                imagePath = "img/local.svg";
+            case "cloudrun":
+                imagePath = "img/cloudrun.svg";
               break;
             case "computeengine":
                 imagePath = "img/computeengine.svg";
@@ -72,6 +108,22 @@ function updateInstance(instance){
             default :
                 imagePath = "img/local.svg";
         }
+
+        var envCont = document.querySelector("." + envType);
+
+        if (envCont == null) {
+            envCont = document.createElement("div");
+            envCont.classList.add("envtype"); 
+            envCont.classList.add(envType);
+            var labelp = document.createElement("p");
+            labelp.innerHTML = instance.env;
+            envCont.appendChild(labelp);
+
+
+            document.querySelector(".load-info").appendChild(envCont); 
+            
+        }
+
 
         var instanceDiv = document.createElement("div");
         instanceDiv.id = "instance-" + instance.id;
@@ -93,7 +145,7 @@ function updateInstance(instance){
         instanceDiv.appendChild(idDiv);
         instanceDiv.appendChild(countDiv);
 
-        document.querySelector(".load-info").appendChild(instanceDiv);
+        envCont.appendChild(instanceDiv);
 
     }
 
@@ -106,7 +158,7 @@ function pollGenerators() {
             reportGenerators(this.responseText);
          }
     };
-    xhttp.open("GET", "/api/nodelist", true);
+    xhttp.open("GET", "/api/nodes", true);
     xhttp.setRequestHeader("Content-type", "application/json");
     xhttp.send();
 }

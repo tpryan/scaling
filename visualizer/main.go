@@ -37,7 +37,8 @@ func main() {
 
 	http.HandleFunc("/healthz", handleHealth)
 	http.HandleFunc("/api/index", handleIndex)
-	http.HandleFunc("/api/nodelist", handleNodeList)
+	http.HandleFunc("/api/nodes", handleNodeList)
+	http.HandleFunc("/api/receivers", handleReceiverList)
 	http.HandleFunc("/api/clear", handleClear)
 	http.HandleFunc("/api/distribute", handleDistribute)
 
@@ -56,7 +57,7 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
 
-	index, err := cache.Index()
+	index, err := cache.InstanceReport()
 	if err != nil {
 		fmt.Printf("%s\n", err)
 	}
@@ -69,6 +70,18 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 func handleNodeList(w http.ResponseWriter, r *http.Request) {
 
 	list, err := cache.ListNodes()
+	if err != nil {
+		fmt.Printf("%s\n", err)
+	}
+
+	apitools.JSON(w, list)
+
+	return
+}
+
+func handleReceiverList(w http.ResponseWriter, r *http.Request) {
+
+	list, err := cache.ListReceivers()
 	if err != nil {
 		fmt.Printf("%s\n", err)
 	}
