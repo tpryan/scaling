@@ -1,7 +1,16 @@
+html{
+    font-family: "Roboto", helvetica, arial, sans-serif;
+    font-weight: 100;
+}
+
 img {
-    filter: grayscale(100%);
     width: 60px;
     height: 60px;
+}
+
+
+.node img {
+    filter: grayscale(100%);
 }
 
 .active img{
@@ -16,40 +25,35 @@ main{
 .load-generators{
     display: flex;
     flex-wrap: wrap;
+    margin: 20px;
+    padding: 20px;
 }
 
 .load-info{
     display: flex;
     flex-wrap: wrap;
+    margin: 20px;
+    padding: 20px;
 }
 
 .node{
-    border: 1px solid red;
     margin: 0 5px 0 0;
     width: 100px;
     text-align: center;
 }
-
-.node .id{
-    border: 1px solid green;
-    text-align: center;
-}
-
 
 .instance{
-    border: 1px solid red;
     margin: 0 5px 0 0;
     width: 100px;
     text-align: center;
 }
 
-
-.instance .id{
-    border: 1px solid green;
+.id{
     text-align: center;
+    font-size: 12px;
 }
 
-.instance .count{
-    border: 1px solid green;
+.count{
     text-align: center;
+    font-size: 12px;
 }
