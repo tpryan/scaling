@@ -34,6 +34,7 @@ func main() {
 	redisHost := os.Getenv("REDISHOST")
 	redisPort := os.Getenv("REDISPORT")
 	environment = os.Getenv("SCALE_ENV")
+	endpoint := os.Getenv("ENDPOINT")
 
 	instanceID, err := getID()
 	if err != nil {
@@ -45,6 +46,10 @@ func main() {
 
 	cache, err = caching.NewCache(redisHost, redisPort, debug)
 	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := cache.RegisterReceiver(environment, endpoint); err != nil {
 		log.Fatal(err)
 	}
 

@@ -12,7 +12,9 @@ build:
 	docker build -t $(APPNAME) "$(BASEDIR)/."
 
 serve:
-	docker run --name=$(APPNAME) -e REDISPORT=6379 -e REDISHOST=docker.for.mac.localhost -e SCALE_ENV=Local -d -P -p 8081:8080 $(APPNAME)
+	docker run --name=$(APPNAME) -e REDISPORT=6379 -e SCALE_ENV=Local \
+	-e REDISHOST=docker.for.mac.localhost \
+	-e ENDPOINT=docker.for.mac.localhost:8081  -d -P -p 8081:8080 $(APPNAME)
 	@echo ----------------------------------------------------	
 	@echo Load Running at 127.0.0.1:8081
 	@echo ----------------------------------------------------	
