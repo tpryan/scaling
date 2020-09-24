@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 BASEDIR = $(shell pwd)
+PROJECT=$(LOADPROJECT)
+REGION=us-central1
+ZONE=us-central1-a
+REDISNAME = load-redis
+REDISIP=$(shell gcloud beta redis instances describe $(REDISNAME) \
+			--region $(REGION) --format='value(host)')
 
 .DEFAULT_GOAL := app
 
@@ -35,3 +41,25 @@ clean:
 	-docker stop abrunner
 	-docker rm abrunner
 	-docker rmi abrunner
+
+cloudbuild:
+	gcloud builds submit --config cloudbuild.yaml  . 
+
+loadmachines:
+	for number in 001 002 003 004 005 006 007 008 009 010 ; do \
+		gcloud beta compute --project=$(PROJECT) instances \
+		create-with-container load-$$number --zone=us-central1-a \
+		--machine-type=e2-micro --tags=http-server \
+		--image-family=cos-81-lts --image-project=cos-cloud \
+		--boot-disk-size=10GB --boot-disk-type=pd-standard \
+		--boot-disk-device-name=load-$$number \
+		--container-image=gcr.io/$(PROJECT)/abrunner:latest \
+		--container-env=REDISHOST=$(REDISIP),REDISPORT=6379,PORT=80 \
+		--container-restart-policy=always; \
+	done		
+
+cleanmachines:
+	for number in 001 002 003 004 005 006 007 008 009 010 ; do \
+		gcloud beta compute --project=$(PROJECT) instances \
+		delete load-$$number --zone=$(ZONE) -q; \
+	done		

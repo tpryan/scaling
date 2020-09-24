@@ -1,7 +1,13 @@
 BASEDIR = $(shell pwd)
 REDISNAME = load-redis
+REGION=us-central1
+PROJECT=$(LOADPROJECT)
 
 .DEFAULT_GOAL := dev
+
+env:
+	gcloud config set project $(PROJECT)
+
 
 redis: redisclean
 	docker run --name $(REDISNAME) -p 6379:6379 -d redis
@@ -25,3 +31,23 @@ dev:
 	@cd visualizer && $(MAKE) 
 
 scratch: redis dev	
+
+
+
+
+
+services: env
+	-gcloud services enable vpcaccess.googleapis.com
+	-gcloud services enable cloudbuild.googleapis.com
+	-gcloud services enable run.googleapis.com
+	-gcloud services enable appengine.googleapis.com 
+	-gcloud services enable compute.googleapis.com 
+	-gcloud services enable redis.googleapis.com
+
+
+
+memorystore: env
+	-gcloud redis instances create $(REDISNAME) --size=1 --region=$(REGION)
+	-gcloud compute networks vpc-access connectors create \
+		$(REDISNAME)connector --network default --region $(REGION) \
+		--range 10.8.0.0/28 
