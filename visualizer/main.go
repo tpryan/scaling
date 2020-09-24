@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/tpryan/apitools"
+	"github.com/tpryan/scaling/apitools"
 	"github.com/tpryan/scaling/caching"
 )
 

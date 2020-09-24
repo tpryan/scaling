@@ -10,7 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/teris-io/shortid"
-	"github.com/tpryan/apitools"
+	"github.com/tpryan/scaling/apitools"
 	"github.com/tpryan/scaling/caching"
 	"google.golang.org/api/run/v1"
 )
