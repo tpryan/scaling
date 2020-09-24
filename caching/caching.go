@@ -125,9 +125,29 @@ func (c Cache) RegisterNode(nodeID, ip string, active bool) error {
 	return nil
 }
 
-// Index returns the whole collection of all of the instances
-func (c Cache) Index() (Index, error) {
-	index := Index{}
+// RegisterReceiver registers a receiver endpoint.
+func (c Cache) RegisterReceiver(env, endpoint string) error {
+
+	conn := c.redisPool.Get()
+	defer conn.Close()
+
+	r := Receiver{env, endpoint}
+
+	rstr, err := r.JSON()
+	if err != nil {
+		return err
+	}
+
+	if _, err := conn.Do("HSET", "receivers", endpoint, rstr); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// InstanceReport returns the whole collection of all of the instances
+func (c Cache) InstanceReport() (InstanceReport, error) {
+	index := InstanceReport{}
 	keys := []interface{}{}
 	intkeys := []string{}
 
@@ -204,6 +224,33 @@ func (c Cache) ListNodes() (NodeList, error) {
 	return keys, nil
 }
 
+// ListReceivers returns the whole collection of all of the receivers
+func (c Cache) ListReceivers() (ReceiverList, error) {
+	keys := ReceiverList{}
+
+	conn := c.redisPool.Get()
+	defer conn.Close()
+
+	s, err := redis.StringMap(conn.Do("HGETALL", "receivers"))
+	if err == redis.ErrNil {
+		return keys, ErrCacheMiss
+	} else if err != nil {
+		return keys, err
+	}
+
+	for _, v := range s {
+		r := Receiver{}
+		err := r.Load(v)
+		if err != nil {
+			return keys, err
+		}
+
+		keys = append(keys, r)
+	}
+
+	return keys, nil
+}
+
 // Distribute splits the load request among the active load generators
 func (c Cache) Distribute(n, con, urlToHit, token string) (ABResponses, error) {
 	ab := ABResponses{}
@@ -253,7 +300,6 @@ func (c Cache) Distribute(n, con, urlToHit, token string) (ABResponses, error) {
 	}
 
 	return ab, nil
-
 }
 
 func (c Cache) send(ip, discount, concur, url, token string) (ABResponse, error) {
@@ -272,6 +318,33 @@ func (c Cache) send(ip, discount, concur, url, token string) (ABResponse, error)
 	return resp, nil
 }
 
+// Node represents a load generator
+type Node struct {
+	ID     string `json:"id"`
+	IP     string `json:"ip"`
+	Active bool   `json:"active"`
+}
+
+// JSON Returns the given Node slice as a JSON string
+func (n Node) JSON() (string, error) {
+
+	bytes, err := json.Marshal(n)
+	if err != nil {
+		return "", fmt.Errorf("could not marshal json for response: %s", err)
+	}
+
+	return string(bytes), nil
+}
+
+// Load populates a structure with data from json.
+func (n *Node) Load(j string) error {
+
+	if err := json.Unmarshal([]byte(j), n); err != nil {
+		return err
+	}
+	return nil
+}
+
 // NodeList is a slice of strings that are the Instances
 type NodeList []Node
 
@@ -286,7 +359,7 @@ func (i NodeList) JSON() (string, error) {
 	return string(bytes), nil
 }
 
-// Instance refers to one record in redis
+// Instance is a record of one instantiation of a load receiver.
 type Instance struct {
 	ID    string `json:"id"`
 	Env   string `json:"env"`
@@ -309,11 +382,11 @@ func (i Instance) JSON() (string, error) {
 	return string(bytes), nil
 }
 
-// Index refers to a collection of instances in redis
-type Index map[string]Instance
+// InstanceReport refers to a collection of instances in redis
+type InstanceReport map[string]Instance
 
 // JSON Returns the given Index struct as a JSON string
-func (i Index) JSON() (string, error) {
+func (i InstanceReport) JSON() (string, error) {
 
 	bytes, err := json.Marshal(i)
 	if err != nil {
@@ -323,7 +396,7 @@ func (i Index) JSON() (string, error) {
 	return string(bytes), nil
 }
 
-// ABResponse the response from Apache Bench
+// ABResponse is an extreme summary of the response from Apache Bench
 type ABResponse struct {
 	Token  string
 	IP     string
@@ -370,17 +443,16 @@ func (a ABResponses) JSON() (string, error) {
 	return string(bytes), nil
 }
 
-// Node represents a load generator
-type Node struct {
-	ID     string `json:"id"`
-	IP     string `json:"ip"`
-	Active bool   `json:"active"`
+// Receiver is a record of the various endpoints that receive load.
+type Receiver struct {
+	Env      string `json:"env"`
+	Endpoint string `json:"endpoint"`
 }
 
-// JSON Returns the given Node slice as a JSON string
-func (n Node) JSON() (string, error) {
+// JSON Returns the given Recevier struct as a JSON string
+func (r Receiver) JSON() (string, error) {
 
-	bytes, err := json.Marshal(n)
+	bytes, err := json.Marshal(r)
 	if err != nil {
 		return "", fmt.Errorf("could not marshal json for response: %s", err)
 	}
@@ -389,10 +461,24 @@ func (n Node) JSON() (string, error) {
 }
 
 // Load populates a structure with data from json.
-func (n *Node) Load(j string) error {
+func (r *Receiver) Load(j string) error {
 
-	if err := json.Unmarshal([]byte(j), n); err != nil {
+	if err := json.Unmarshal([]byte(j), r); err != nil {
 		return err
 	}
 	return nil
+}
+
+// ReceiverList is a slice of strings that are the Instances
+type ReceiverList []Receiver
+
+// JSON Returns the given ReceiverList slice as a JSON string
+func (r ReceiverList) JSON() (string, error) {
+
+	bytes, err := json.Marshal(r)
+	if err != nil {
+		return "", fmt.Errorf("could not marshal json for response: %s", err)
+	}
+
+	return string(bytes), nil
 }
