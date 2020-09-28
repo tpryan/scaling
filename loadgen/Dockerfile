@@ -21,4 +21,6 @@ RUN mkdir -p /go/bin/
 COPY abrunner /go/bin/abrunner
 RUN chmod +x /go/bin/abrunner
 
+ENV TARGET_QPS=4000
+
 ENTRYPOINT /go/bin/abrunner

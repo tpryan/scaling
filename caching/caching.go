@@ -2,6 +2,7 @@ package caching
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -251,6 +252,27 @@ func (c Cache) ListReceivers() (ReceiverList, error) {
 	return keys, nil
 }
 
+func (c Cache) calcRates(n string, cc string, count int) (string, string, error) {
+	nInt, err := strconv.Atoi(n)
+	if err != nil {
+		return "", "", errors.New("Could not get valid value for `n`: " + n)
+	}
+
+	cInt, err := strconv.Atoi(cc)
+	if err != nil {
+		return "", "", fmt.Errorf("could not get valid value for env variable `TARGET_QPS`: %s", cc)
+	}
+
+	nodeN := nInt / count
+	nodeC := cInt / count
+
+	// Ensures that C never exceeds N cause if that happens Apache Bench fails.
+	if nodeC > nodeN {
+		nodeC = nodeN
+	}
+	return strconv.Itoa(nodeN), strconv.Itoa(nodeC), nil
+}
+
 // Distribute splits the load request among the active load generators
 func (c Cache) Distribute(n, con, urlToHit, token string) (ABResponses, error) {
 	ab := ABResponses{}
@@ -261,21 +283,19 @@ func (c Cache) Distribute(n, con, urlToHit, token string) (ABResponses, error) {
 		return ab, err
 	}
 
-	nint, err := strconv.Atoi(n)
-	if err != nil {
-		return ab, err
-	}
-
 	listlen := len(list)
 
 	if listlen == 0 {
 		return ab, fmt.Errorf("there are no load nodes registered")
 	}
 
-	distCount := strconv.Itoa(nint / listlen)
-
 	out := make(chan ABResponse)
 	errs := make(chan error)
+
+	perN, perC, err := c.calcRates(n, con, listlen)
+	if err != nil {
+		return ab, err
+	}
 
 	for _, v := range list {
 
@@ -286,7 +306,7 @@ func (c Cache) Distribute(n, con, urlToHit, token string) (ABResponses, error) {
 				return
 			}
 			out <- resp
-		}(v.IP, distCount, con, urlToHit, token)
+		}(v.IP, perN, perC, urlToHit, token)
 
 	}
 
