@@ -28,3 +28,5 @@ clean:
 	-docker rm $(APPNAME)
 	-docker rmi $(APPNAME)
 
+deploy:
+	gcloud app deploy -q
