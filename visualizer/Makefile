@@ -1,8 +1,12 @@
 BASEDIR = $(shell pwd)
 REDISNAME = load-redis
 APPNAME = visualizer
+PROJECT=$(LOADPROJECT)
 
 .DEFAULT_GOAL := app
+
+env:
+	gcloud config set project $(PROJECT)
 
 app: clean visualizer build serve
 
@@ -23,3 +27,4 @@ clean:
 	-docker stop $(APPNAME)
 	-docker rm $(APPNAME)
 	-docker rmi $(APPNAME)
+

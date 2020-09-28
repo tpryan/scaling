@@ -9,13 +9,28 @@
 <body>
 
     <main>
+        <div class="alert">
+            <div class="msg">
+                You sent <span id="sentrequests"><span class="count">0</span> Requests</span> <br />
+                <span id="receiverlabel">App Engine</span> handled <span id="totalrequests"><span class="count"></span> Requests</span> in <span class="seconds"></span> seconds  (QPS: <span class="qps"></span>)<br />
+                By spinning up <span id="totalinstances"><span class="count"></span> Instances</span>
+
+            </div>
+        </div>
+        <div class="slider-holder">
+            <button class="clear">Reset</button>
+            <button id="load">Send Load</button>
+            <input id="loadcount" type="range" value="10000" min="1000" max="200000" step="1000" />
+            <output id="loadoutput" for="loadcount"></output>
+        </div>
+
+
         <div class="load-generators"></div>
         <button class="send">Send Load</button>
         <select id="receiver" name="receiver">
             <option>Pick an endpoint</option>
         </select>
         <div class="load-info"></div>
-        <button class="clear">Clear</button>
     </main>
     <script src="js/main.js"></script>
 </body>

@@ -42,7 +42,7 @@ func main() {
 	http.HandleFunc("/api/clear", handleClear)
 	http.HandleFunc("/api/distribute", handleDistribute)
 
-	http.Handle("/", http.FileServer(http.Dir("/static")))
+	http.Handle("/", http.FileServer(http.Dir("./static")))
 
 	if err := http.ListenAndServe(port, nil); err != nil {
 		log.Fatal(err)

@@ -64,6 +64,8 @@ function reportLoad(content){
         }
     };
 
+    document.querySelector("#sentrequests .count").innerHTML= calculateCount(loadIndex);
+
 
 }
 
@@ -79,9 +81,21 @@ function loadReceivers(content){
         opt.text = `${receiver.env} (${receiver.endpoint})  `;
         select.appendChild(opt);
     });
-
-
 }
+
+function calculateCount(instances){
+    var total = 0;
+
+    for (var instance in instances) {
+        if (instances.hasOwnProperty(instance)) {
+            total += instances[instance].count;
+        }
+    };
+
+
+    return total;
+}
+
 
 function updateInstance(instance){
 
