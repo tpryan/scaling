@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/tpryan/scaling/apitools"
 	"github.com/tpryan/scaling/caching"
@@ -93,8 +94,23 @@ func handleReceiverList(w http.ResponseWriter, r *http.Request) {
 
 func handleClear(w http.ResponseWriter, r *http.Request) {
 
+	list, err := cache.ListReceivers()
+	if err != nil {
+		apitools.Error(w, err)
+		return
+	}
+
 	if err := cache.Clear(); err != nil {
-		fmt.Printf("%s\n", err)
+		apitools.Error(w, err)
+		return
+	}
+
+	for _, v := range list {
+		_, err := http.Get(strings.TrimSpace(v.Endpoint) + "/register")
+		if err != nil {
+			apitools.Error(w, err)
+			return
+		}
 	}
 
 	apitools.Success(w, "cleared")

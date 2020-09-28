@@ -19,6 +19,7 @@ var (
 	port        = ""
 	instance    = caching.Instance{}
 	environment = ""
+	endpoint    = ""
 )
 
 func main() {
@@ -32,7 +33,7 @@ func main() {
 	redisHost := os.Getenv("REDISHOST")
 	redisPort := os.Getenv("REDISPORT")
 	environment = os.Getenv("SCALE_ENV")
-	endpoint := os.Getenv("ENDPOINT")
+	endpoint = os.Getenv("ENDPOINT")
 
 	instanceID, err := getID()
 	if err != nil {
@@ -53,6 +54,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/healthz", handleHealth)
+	r.HandleFunc("/register", handleRegister)
 	r.HandleFunc("/", handleRecord)
 
 	http.Handle("/", r)
@@ -63,6 +65,16 @@ func main() {
 }
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
+	apitools.Success(w, "ok")
+	return
+}
+
+func handleRegister(w http.ResponseWriter, r *http.Request) {
+	if err := cache.RegisterReceiver(environment, endpoint); err != nil {
+		apitools.Error(w, err)
+		return
+	}
+
 	apitools.Success(w, "ok")
 	return
 }

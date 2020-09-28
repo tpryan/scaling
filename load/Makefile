@@ -36,14 +36,17 @@ clean:
 	-docker rmi $(APPNAME)
 
 
-appengine:
+appengine: env
 	gcloud app deploy -q
 
-cloudbuild: env
+cloudbuild: env loadreceiver
 	gcloud builds submit
 
-cloudrun: 
+cloudrun: env cloudbuild
 	gcloud run deploy receiver -q --image gcr.io/$(PROJECT)/load:latest \
 	--set-env-vars=REDISHOST="$(REDISIP)",REDISPORT="6379",SCALE_ENV="cloudrun",ENDPOINT="$(ENDPOINT)" \
 	--platform=managed --region=$(REGION)  --vpc-connector=load-redisconnector \
 	--allow-unauthenticated
+
+
+deploy: env clean appengine cloudrun 
