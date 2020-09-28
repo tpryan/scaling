@@ -20,7 +20,7 @@ function distribute() {
     var select = document.querySelector("#receiver");
     var currentOpt = select.options[select.selectedIndex]; 
     var endpoint = currentOpt.value;
-    var url = `/api/distribute?n=1000&c=1&url=http://${endpoint}/`
+    var url = `/api/distribute?n=1000&c=1&url=${endpoint}/`
 
 
     xhttp.open("GET", url, true);
