@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/compute/metadata"
+	"cloud.google.com/go/logging"
 	"github.com/tpryan/scaling/apitools"
 	"github.com/tpryan/scaling/caching"
 )
@@ -22,6 +24,7 @@ var (
 	selfHostName = ""
 	active       = false
 	nodeID       = ""
+	logger       *logging.Logger
 )
 
 func main() {
@@ -29,6 +32,14 @@ func main() {
 
 	redisHost := os.Getenv("REDISHOST")
 	redisPort := os.Getenv("REDISPORT")
+	projectID := os.Getenv("PROJECTID")
+
+	client, err := logging.NewClient(context.Background(), projectID)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+
+	logger = client.Logger("load.loadgen")
 
 	port = fmt.Sprintf(":%s", os.Getenv("PORT"))
 	if port == ":" {
@@ -37,11 +48,13 @@ func main() {
 
 	cache, err = caching.NewCache(redisHost, redisPort, debug)
 	if err != nil {
+		sdlog("could not start cache", err)
 		log.Fatal(fmt.Errorf("could not start cache: %w", err))
 	}
 
 	nodeID, err = caching.CreateID()
 	if err != nil {
+		sdlog("could not create cache id", err)
 		log.Fatal(fmt.Errorf("could not create cache id: %w", err))
 	}
 
@@ -51,7 +64,8 @@ func main() {
 	}
 
 	if err := cache.RegisterNode(nodeID, selfHostName, false); err != nil {
-		fmt.Printf("caching issue host: %s port: %s\n", redisHost, redisPort)
+		msg := fmt.Sprintf("caching issue host: %s port: %s\n", redisHost, redisPort)
+		sdlog(msg, err)
 		log.Fatal(fmt.Errorf("could not register the node: %w", err))
 	}
 
@@ -62,6 +76,7 @@ func main() {
 
 	fmt.Printf("starting webserver\n")
 	if err := http.ListenAndServe(port, nil); err != nil {
+		sdlog("could not start webserver", err)
 		log.Fatal(fmt.Errorf("could not start webserver: %w", err))
 	}
 }
@@ -70,6 +85,7 @@ func registerNode() {
 
 	fmt.Printf("registering node\n")
 	if err := cache.RegisterNode(nodeID, selfHostName, active); err != nil {
+		sdlog("could not register node", err)
 		fmt.Printf("could not register node\n")
 	}
 }
@@ -178,4 +194,17 @@ type userAgentTransport struct {
 func (t userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Set("User-Agent", t.userAgent)
 	return t.base.RoundTrip(req)
+}
+
+func sdlog(msg string, err error) {
+	if err != nil {
+
+		txt := fmt.Sprintf(msg+": %s", err)
+
+		logger.Log(logging.Entry{Payload: txt, Severity: logging.Error})
+		return
+	}
+
+	logger.Log(logging.Entry{Payload: msg, Severity: logging.Info})
+	return
 }
