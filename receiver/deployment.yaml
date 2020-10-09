@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: receiver
+  labels:
+    app: receiver
+spec:
+  replicas: 50
+  selector:
+    matchLabels:
+      app: receiver
+  template:
+    metadata:
+      labels:
+        app: receiver
+    spec:
+      containers:
+      - name: receiver
+        image: gcr.io/carnivaldemos/receiver:latest
+        livenessProbe:
+          initialDelaySeconds: 2
+          periodSeconds: 5
+          httpGet:
+            path: /healthz
+            port: 8080
+        ports:
+        - containerPort: 8080
+        env:
+            - name: REDISPORT
+              value: "6379"
+            - name: REDISHOST
+              value: "10.187.179.219"
+            - name: SCALE_ENV
+              value: "GKE"
+            - name: ENDPOINT
+              value: "http://35.244.234.192/record"
+            - name: PORT
+              value: "8080"          
+

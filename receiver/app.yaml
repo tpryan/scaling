@@ -1,0 +1,11 @@
+service: receiver
+runtime: go113
+
+env_variables:
+    REDISHOST: '10.187.179.219'
+    REDISPORT: '6379'
+    SCALE_ENV: 'appengine' 
+    ENDPOINT: 'http://receiver-dot-carnivaldemos.uc.r.appspot.com/record'
+  
+vpc_access_connector:
+    name: 'projects/carnivaldemos/locations/us-central1/connectors/load-redisconnector'
