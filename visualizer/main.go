@@ -70,7 +70,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 
 func handleNodeList(w http.ResponseWriter, r *http.Request) {
 
-	list, err := cache.ListNodes()
+	list, err := cache.Nodes()
 	if err != nil {
 		fmt.Printf("%s\n", err)
 	}
@@ -82,7 +82,7 @@ func handleNodeList(w http.ResponseWriter, r *http.Request) {
 
 func handleReceiverList(w http.ResponseWriter, r *http.Request) {
 
-	list, err := cache.ListReceivers()
+	list, err := cache.Receivers()
 	if err != nil {
 		fmt.Printf("%s\n", err)
 	}
@@ -94,7 +94,7 @@ func handleReceiverList(w http.ResponseWriter, r *http.Request) {
 
 func handleClear(w http.ResponseWriter, r *http.Request) {
 
-	list, err := cache.ListReceivers()
+	list, err := cache.Receivers()
 	if err != nil {
 		apitools.Error(w, err)
 		return

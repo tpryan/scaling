@@ -63,7 +63,7 @@ func main() {
 		selfHostName = "docker.for.mac.localhost:8082"
 	}
 
-	if err := cache.RegisterNode(nodeID, selfHostName, false); err != nil {
+	if err := cache.RegisterGenerator(nodeID, selfHostName, false); err != nil {
 		msg := fmt.Sprintf("caching issue host: %s port: %s\n", redisHost, redisPort)
 		sdlog(msg, err)
 		log.Fatal(fmt.Errorf("could not register the node: %w", err))
@@ -84,7 +84,7 @@ func main() {
 func registerNode() {
 
 	fmt.Printf("registering node\n")
-	if err := cache.RegisterNode(nodeID, selfHostName, active); err != nil {
+	if err := cache.RegisterGenerator(nodeID, selfHostName, active); err != nil {
 		sdlog("could not register node", err)
 		fmt.Printf("could not register node\n")
 	}
@@ -133,7 +133,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	urltohit += "?token=" + token
 
 	active = true
-	if err := cache.RegisterNode(nodeID, selfHostName, active); err != nil {
+	if err := cache.RegisterGenerator(nodeID, selfHostName, active); err != nil {
 		apitools.Error(w, err)
 		return
 	}
@@ -152,7 +152,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	active = false
-	if err := cache.RegisterNode(nodeID, selfHostName, active); err != nil {
+	if err := cache.RegisterGenerator(nodeID, selfHostName, active); err != nil {
 		apitools.Error(w, err)
 		return
 	}
