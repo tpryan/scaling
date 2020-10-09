@@ -62,4 +62,6 @@ cleanmachines:
 	for number in 001 002 003 004 005 006 007 008 009 010 ; do \
 		gcloud beta compute --project=$(PROJECT) instances \
 		delete load-$$number --zone=$(ZONE) -q; \
-	done		
+	done	
+
+rebuild: cleanmachines loadmachines
