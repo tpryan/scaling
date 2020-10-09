@@ -5,3 +5,4 @@ visualizer/visualizer
 visualizer/.DS_Store
 load/app.yaml
 visualizer/app.yaml
+load/deployment.yaml
