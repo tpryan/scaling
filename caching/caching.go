@@ -106,13 +106,13 @@ func (c Cache) Record(instance Instance) error {
 	return nil
 }
 
-// RegisterNode registers a load producing node.
-func (c Cache) RegisterNode(nodeID, ip string, active bool) error {
+// RegisterGenerator registers a load producing node.
+func (c Cache) RegisterGenerator(nodeID, ip string, active bool) error {
 
 	conn := c.redisPool.Get()
 	defer conn.Close()
 
-	node := Node{nodeID, ip, active}
+	node := Generator{nodeID, ip, active}
 
 	nodestr, err := node.JSON()
 	if err != nil {
@@ -198,9 +198,9 @@ func (c Cache) InstanceReport() (InstanceReport, error) {
 	return index, nil
 }
 
-// ListNodes returns the whole collection of all of the load nodes
-func (c Cache) ListNodes() (NodeList, error) {
-	keys := NodeList{}
+// Nodes returns the whole collection of all of the load nodes
+func (c Cache) Nodes() (Generators, error) {
+	keys := Generators{}
 
 	conn := c.redisPool.Get()
 	defer conn.Close()
@@ -213,7 +213,7 @@ func (c Cache) ListNodes() (NodeList, error) {
 	}
 
 	for _, v := range s {
-		node := Node{}
+		node := Generator{}
 		err := node.Load(v)
 		if err != nil {
 			return keys, err
@@ -225,9 +225,9 @@ func (c Cache) ListNodes() (NodeList, error) {
 	return keys, nil
 }
 
-// ListReceivers returns the whole collection of all of the receivers
-func (c Cache) ListReceivers() (ReceiverList, error) {
-	keys := ReceiverList{}
+// Receivers returns the whole collection of all of the receivers
+func (c Cache) Receivers() (Receivers, error) {
+	keys := Receivers{}
 
 	conn := c.redisPool.Get()
 	defer conn.Close()
@@ -277,7 +277,7 @@ func (c Cache) calcRates(n string, cc string, count int) (string, string, error)
 func (c Cache) Distribute(n, con, urlToHit, token string) (ABResponses, error) {
 	ab := ABResponses{}
 
-	list, err := c.ListNodes()
+	list, err := c.Nodes()
 
 	if err != nil {
 		return ab, err
@@ -338,15 +338,15 @@ func (c Cache) send(ip, discount, concur, url, token string) (ABResponse, error)
 	return resp, nil
 }
 
-// Node represents a load generator
-type Node struct {
+// Generator represents a load generator
+type Generator struct {
 	ID     string `json:"id"`
 	IP     string `json:"ip"`
 	Active bool   `json:"active"`
 }
 
 // JSON Returns the given Node slice as a JSON string
-func (n Node) JSON() (string, error) {
+func (n Generator) JSON() (string, error) {
 
 	bytes, err := json.Marshal(n)
 	if err != nil {
@@ -357,7 +357,7 @@ func (n Node) JSON() (string, error) {
 }
 
 // Load populates a structure with data from json.
-func (n *Node) Load(j string) error {
+func (n *Generator) Load(j string) error {
 
 	if err := json.Unmarshal([]byte(j), n); err != nil {
 		return err
@@ -365,11 +365,11 @@ func (n *Node) Load(j string) error {
 	return nil
 }
 
-// NodeList is a slice of strings that are the Instances
-type NodeList []Node
+// Generators is a slice of strings that are the Instances
+type Generators []Generator
 
 // JSON Returns the given NodeList slice as a JSON string
-func (i NodeList) JSON() (string, error) {
+func (i Generators) JSON() (string, error) {
 
 	bytes, err := json.Marshal(i)
 	if err != nil {
@@ -489,11 +489,11 @@ func (r *Receiver) Load(j string) error {
 	return nil
 }
 
-// ReceiverList is a slice of strings that are the Instances
-type ReceiverList []Receiver
+// Receivers is a slice of strings that are the Instances
+type Receivers []Receiver
 
 // JSON Returns the given ReceiverList slice as a JSON string
-func (r ReceiverList) JSON() (string, error) {
+func (r Receivers) JSON() (string, error) {
 
 	bytes, err := json.Marshal(r)
 	if err != nil {
