@@ -43,6 +43,7 @@ services: env
 	-gcloud services enable appengine.googleapis.com 
 	-gcloud services enable compute.googleapis.com 
 	-gcloud services enable redis.googleapis.com
+	-gcloud services enable cloudscheduler.googleapis.com
 
 
 
