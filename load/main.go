@@ -55,7 +55,8 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/healthz", handleHealth)
 	r.HandleFunc("/register", handleRegister)
-	r.HandleFunc("/", handleRecord)
+	r.HandleFunc("/record", handleRecord)
+	r.HandleFunc("/", handleHealth)
 
 	http.Handle("/", r)
 	if err := http.ListenAndServe(port, nil); err != nil {
