@@ -1,7 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelector(".send").addEventListener("click", distribute);  
     document.querySelector(".clear").addEventListener("click", clear); 
+    document.querySelector("#loadcount").addEventListener("change", synchLoadUI); 
     getReceivers();
+    synchLoadUI();
 
     setInterval(pollLoad, 100);
     setInterval(pollGenerators, 100);
@@ -9,7 +11,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 function distribute() {
+    document.querySelector(".send").disabled = true;
     var xhttp = new XMLHttpRequest();
+    var n = document.querySelector("#loadcount").value;
+    
     xhttp.onreadystatechange = function() {
          if (this.readyState == 4 && this.status == 200) {
             console.log("Fireing load - success");
@@ -17,10 +22,14 @@ function distribute() {
          }
     };
 
+    var n = document.querySelector("#loadcount").value;
+    var c = n/10; 
+
     var select = document.querySelector("#receiver");
     var currentOpt = select.options[select.selectedIndex]; 
-    var endpoint = currentOpt.value;
-    var url = `/api/distribute?n=1000&c=1&url=${endpoint}/`
+    var endpoint = currentOpt.value.replace(/\s+/g, '');
+    var url = `/api/distribute?n=${n}&c=${c}&url=${endpoint}`
+    console.log("URL", url);
 
 
     xhttp.open("GET", url, true);
@@ -113,6 +122,9 @@ function updateInstance(instance){
             case "cloudrun":
                 imagePath = "img/cloudrun.svg";
               break;
+            case "gke":
+                imagePath = "img/gke.svg";
+              break;  
             case "computeengine":
                 imagePath = "img/computeengine.svg";
               break;
@@ -224,6 +236,7 @@ function updateLoadGenerator(node){
 
 function clear() {
     console.log("Clear called")
+    document.querySelector(".send").disabled = false;
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
          if (this.readyState == 4 && this.status == 200) {
@@ -235,4 +248,10 @@ function clear() {
     xhttp.open("GET", "/api/clear", true);
     xhttp.setRequestHeader("Content-type", "application/json");
     xhttp.send();
+}
+
+function synchLoadUI(){
+    var count = document.querySelector("#loadcount");
+    var output = document.querySelector("#loadoutput");
+    output.value = count.value;
 }
