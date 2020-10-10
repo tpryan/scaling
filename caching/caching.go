@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -120,7 +121,7 @@ func (c Cache) RegisterGenerator(nodeID, ip string, active bool) error {
 	}
 
 	if _, err := conn.Do("HSET", "loadnodes", ip, nodestr); err != nil {
-		return err
+		return fmt.Errorf("cannot set loadnodes in redis: %s", err)
 	}
 
 	return nil
@@ -198,8 +199,8 @@ func (c Cache) InstanceReport() (InstanceReport, error) {
 	return index, nil
 }
 
-// Nodes returns the whole collection of all of the load nodes
-func (c Cache) Nodes() (Generators, error) {
+// Generators returns the whole collection of all of the load nodes
+func (c Cache) Generators() (Generators, error) {
 	keys := Generators{}
 
 	conn := c.redisPool.Get()
@@ -277,7 +278,7 @@ func (c Cache) calcRates(n string, cc string, count int) (string, string, error)
 func (c Cache) Distribute(n, con, urlToHit, token string) (ABResponses, error) {
 	ab := ABResponses{}
 
-	list, err := c.Nodes()
+	list, err := c.Generators()
 
 	if err != nil {
 		return ab, err
@@ -501,4 +502,19 @@ func (r Receivers) JSON() (string, error) {
 	}
 
 	return string(bytes), nil
+}
+
+// URLList turns the list of endpoints as URLS
+func (r Receivers) URLList() ([]*url.URL, error) {
+	result := []*url.URL{}
+
+	for _, v := range r {
+		u, err := url.Parse(v.Endpoint)
+		if err != nil {
+			return result, err
+		}
+		result = append(result, u)
+
+	}
+	return result, nil
 }

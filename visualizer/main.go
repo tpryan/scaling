@@ -70,7 +70,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 
 func handleNodeList(w http.ResponseWriter, r *http.Request) {
 
-	list, err := cache.Nodes()
+	list, err := cache.Generators()
 	if err != nil {
 		fmt.Printf("%s\n", err)
 	}
