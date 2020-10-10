@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"time"
@@ -25,6 +26,8 @@ var (
 	active       = false
 	nodeID       = ""
 	logger       *logging.Logger
+	logWorking   = true
+	receviers    = []*url.URL{}
 )
 
 func main() {
@@ -34,12 +37,11 @@ func main() {
 	redisPort := os.Getenv("REDISPORT")
 	projectID := os.Getenv("PROJECTID")
 
-	client, err := logging.NewClient(context.Background(), projectID)
+	logger, err = getLogger(projectID)
 	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+		logWorking = false
+		fmt.Printf("Failed to create logger or client: %v", err)
 	}
-
-	logger = client.Logger("generator")
 
 	port = fmt.Sprintf(":%s", os.Getenv("PORT"))
 	if port == ":" {
@@ -66,7 +68,7 @@ func main() {
 	if err := cache.RegisterGenerator(nodeID, selfHostName, false); err != nil {
 		msg := fmt.Sprintf("caching issue host: %s port: %s\n", redisHost, redisPort)
 		sdlog(msg, err)
-		log.Fatal(fmt.Errorf("could not register the node: %w", err))
+		log.Fatal(fmt.Errorf("could not register the generator: %w", err))
 	}
 
 	go startPolling()
@@ -81,13 +83,51 @@ func main() {
 	}
 }
 
+func verifyURL(URLString string) bool {
+	fmt.Printf("URL: %s\n", URLString)
+	u, err := url.Parse(URLString)
+	if err != nil {
+		fmt.Printf("Verified: true \n")
+		return false
+	}
+
+	for _, v := range receviers {
+		if v.Hostname() == u.Hostname() && v.Port() == u.Port() {
+			fmt.Printf("Verified: true \n")
+			return true
+		}
+	}
+
+	fmt.Printf("Verified: true \n")
+	return false
+}
+
+func getLogger(projectID string) (*logging.Logger, error) {
+	client, err := logging.NewClient(context.Background(), projectID)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create client: %v", err)
+	}
+
+	return client.Logger("generator"), nil
+}
+
 func registerNode() {
 
-	fmt.Printf("registering node\n")
-	if err := cache.RegisterGenerator(nodeID, selfHostName, active); err != nil {
+	err := cache.RegisterGenerator(nodeID, selfHostName, active)
+	if err != nil {
 		sdlog("could not register node", err)
-		fmt.Printf("could not register node\n")
 	}
+
+	rs, err := cache.Receivers()
+	if err != nil {
+		sdlog("could not get generator list", err)
+	}
+
+	receviers, err = rs.URLList()
+	if err != nil {
+		sdlog("could not make generator url list", err)
+	}
+
 }
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -130,6 +170,12 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ok := verifyURL(urltohit)
+	if !ok {
+		apitools.Error(w, errors.New("only in registered generators can be used - no ddosing"))
+		return
+	}
+
 	urltohit += "?token=" + token
 
 	active = true
@@ -138,6 +184,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Printf("sending load to %s \n", urltohit)
 	results, err := ab(n, c, urltohit)
 	if err != nil {
 		if err.Error() == "exit status 22" {
@@ -150,6 +197,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		apitools.Error(w, err)
 		return
 	}
+	fmt.Printf("load sent\n")
+	fmt.Printf("%s\n", results)
 
 	active = false
 	if err := cache.RegisterGenerator(nodeID, selfHostName, active); err != nil {
@@ -169,7 +218,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeLog(data []byte, token string) error {
-	name := fmt.Sprintf("/go/src/abrunner/logs/log_%s.log", token)
+	name := fmt.Sprintf("/go/src/generator/logs/log_%s.log", token)
 	return ioutil.WriteFile(name, data, 0644)
 }
 
@@ -197,10 +246,15 @@ func (t userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error)
 }
 
 func sdlog(msg string, err error) {
+	log.Printf("sdLog called, logworking is %t", logWorking)
+	txt := fmt.Sprintf(msg+": %s", err)
+	log.Printf("%s", msg)
+	if !logWorking {
+		log.Printf("%s", txt)
+		return
+	}
+
 	if err != nil {
-
-		txt := fmt.Sprintf(msg+": %s", err)
-
 		logger.Log(logging.Entry{Payload: txt, Severity: logging.Error})
 		return
 	}
