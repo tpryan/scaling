@@ -26,7 +26,7 @@ build:
 serve:
 	docker run --name=$(APPNAME) -e REDISPORT=6379 -e SCALE_ENV=Local \
 	-e REDISHOST=docker.for.mac.localhost \
-	-e ENDPOINT=http://docker.for.mac.localhost:8081  -d -P -p 8081:8080 $(APPNAME)
+	-e ENDPOINT=http://docker.for.mac.localhost:8081/record  -d -P -p 8081:8080 $(APPNAME)
 	@echo ----------------------------------------------------	
 	@echo Load Running at 127.0.0.1:8081
 	@echo ----------------------------------------------------	

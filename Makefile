@@ -21,13 +21,13 @@ redisclean:
 
 
 clean: redisclean
-	cd loadgen && $(MAKE) clean
-	cd load && $(MAKE) clean
+	cd generator && $(MAKE) clean
+	cd receiver && $(MAKE) clean
 	cd visualizer && $(MAKE) clean
 
 dev: 
-	@cd loadgen && $(MAKE) 
-	@cd load && $(MAKE) 
+	@cd generator && $(MAKE) 
+	@cd receiver && $(MAKE) 
 	@cd visualizer && $(MAKE) 
 
 scratch: redis dev	
