@@ -4,8 +4,7 @@ PROJECT=$(LOADPROJECT)
 REGION=us-central1
 ZONE=us-central1-c
 REDISNAME = load-redis
-REDISIP=$(shell gcloud beta redis instances describe $(REDISNAME) \
-			--region $(REGION) --format='value(host)')
+REDISIP=$(shell gcloud beta redis instances describe $(REDISNAME) --region $(REGION) --format='value(host)')
 ENDPOINT=$(shell gcloud run services list --platform managed --format='value(URL)' )
 GKEIP=$(shell gcloud compute addresses list --filter='name=gkeloadip' --format='value(ADDRESS)' )
 
@@ -26,7 +25,8 @@ build:
 serve:
 	docker run --name=$(APPNAME) -e REDISPORT=6379 -e SCALE_ENV=Local \
 	-e REDISHOST=docker.for.mac.localhost \
-	-e ENDPOINT=http://docker.for.mac.localhost:8081/record  -d -P -p 8081:8080 $(APPNAME)
+	-e ENDPOINT=http://docker.for.mac.localhost:8081/record  \
+	-d -P -p 8081:8080 $(APPNAME)
 	@echo ----------------------------------------------------	
 	@echo Load Running at 127.0.0.1:8081
 	@echo ----------------------------------------------------	
