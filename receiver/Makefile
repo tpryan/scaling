@@ -7,6 +7,8 @@ REDISNAME = load-redis
 REDISIP=$(shell gcloud beta redis instances describe $(REDISNAME) --region $(REGION) --format='value(host)')
 ENDPOINT=$(shell gcloud run services list --platform managed --format='value(URL)' )
 GKEIP=$(shell gcloud compute addresses list --filter='name=gkeloadip' --format='value(ADDRESS)' )
+GCEIP=$(shell gcloud compute addresses list --filter='name=gceloadip' --format='value(ADDRESS)' )
+DISKIMAGE=receiver-image
 
 .DEFAULT_GOAL := app
 
@@ -91,8 +93,9 @@ gkeclean:
 deletecluster:
 	gcloud beta container clusters delete "loadcluster" -q
 
-ip:
+ips:
 	gcloud compute addresses create gkeloadip --global
+	gcloud compute addresses create gceloadip --global
 
 deploy: env clean appengine cloudrun 
 
@@ -108,3 +111,34 @@ schedule:
 	--uri=$(ENDPOINT)/register 
 	gcloud scheduler jobs create app-engine register-gae --schedule="* * * * *" \
 	--service receiver --relative-url /register
+
+EXEMPLAR = receiver-exemplar
+
+exemplar: env
+	gcloud compute instances create $(EXEMPLAR) \
+	--zone $(ZONE) --machine-type "n1-standard-1" \
+	--image-project "debian-cloud" --image-family "debian-10" \
+	--boot-disk-size "200" --no-boot-disk-auto-delete \
+	--boot-disk-type "pd-standard" --boot-disk-device-name $(EXEMPLAR) \
+	--tags "http-server,ssh-server"
+	gcloud compute ssh receiver-exemplar --command="sudo apt-get install insserv"
+
+receiver-service: env
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o "$(BASEDIR)/receiver" "$(BASEDIR)/main.go" 
+	gcloud compute scp  "$(BASEDIR)/receiver" $(EXEMPLAR):~
+	gcloud compute ssh $(EXEMPLAR) --command="sudo mv receiver /opt"
+	gcloud compute scp  "$(BASEDIR)/receiver.sh" $(EXEMPLAR):~
+	gcloud compute ssh $(EXEMPLAR) --command="sudo mv receiver.sh receiver"
+	gcloud compute ssh $(EXEMPLAR) --command="sudo mv receiver /etc/init.d"
+	gcloud compute ssh $(EXEMPLAR) --command="sudo chown root:root /etc/init.d/receiver"
+	gcloud compute ssh $(EXEMPLAR) --command="sudo chmod 755 /etc/init.d/receiver"
+	gcloud compute ssh $(EXEMPLAR) --command="sudo update-rc.d receiver defaults"
+	gcloud compute ssh $(EXEMPLAR) --command="sudo /etc/init.d/receiver start"
+
+clean.exemplar:
+	-gcloud compute instances delete $(EXEMPLAR) -q
+
+image: 
+	-gcloud compute instances delete $(EXEMPLAR) -q
+	gcloud compute images create $(DISKIMAGE) --family=receiver \
+	--source-disk=$(EXEMPLAR) --source-disk-zone=$(ZONE)	
