@@ -125,7 +125,7 @@ function updateInstance(instance){
             case "gke":
                 imagePath = "img/gke.svg";
               break;  
-            case "computeengine":
+            case "gce":
                 imagePath = "img/computeengine.svg";
               break;
             case "appengine":
