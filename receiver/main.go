@@ -45,11 +45,11 @@ func main() {
 
 	cache, err = caching.NewCache(redisHost, redisPort, debug)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(fmt.Errorf("cannot connect to %s:%s: %s", redisHost, redisHost, err))
 	}
 
 	if err := cache.RegisterReceiver(environment, endpoint); err != nil {
-		log.Fatal(err)
+		log.Fatal(fmt.Errorf("cannot register a new instance: %s", err))
 	}
 
 	r := mux.NewRouter()
