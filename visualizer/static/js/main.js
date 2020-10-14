@@ -128,6 +128,9 @@ function updateInstance(instance){
             case "gce":
                 imagePath = "img/computeengine.svg";
               break;
+            case "gcf":
+                imagePath = "img/cloudfunctions.svg";
+              break;  
             case "appengine":
                 imagePath = "img/appengine.svg";
               break;

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 22.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 32 32" style="enable-background:new 0 0 32 32;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:none;}
+	.st1{fill:#1976D2;}
+	.st2{fill:#1565C0;}
+	.st3{fill:#1E88E5;}
+</style>
+<title>colored-32/functions</title>
+<desc>Created with Sketch.</desc>
+<g id="Sections">
+	<g id="colored-32_x2F_functions">
+		<rect id="Container" class="st0" width="32" height="32"/>
+		<g id="Shape" transform="translate(1.000000, 2.000000)">
+			<polygon class="st1" points="30,8.7 26,6.7 26,21.4 30,19.4 			"/>
+			<polygon class="st1" points="0,19.3 4,21.3 4,6.6 0,8.6 			"/>
+			<polygon class="st2" points="30,16.4 26,18.4 26,20.4 			"/>
+			<polygon class="st2" points="26,7.7 26,9.7 30,11.7 			"/>
+			<polygon class="st3" points="21.5,24.8 30,16.4 30,22 24.3,27.7 			"/>
+			<polygon class="st3" points="21.5,3.2 30,11.7 30,6 24.3,0.3 			"/>
+			<polygon class="st2" points="0,11.6 4,9.6 4,7.7 			"/>
+			<polygon class="st2" points="4,20.3 4,18.3 0,16.3 			"/>
+			<polygon class="st3" points="8.5,3.2 0,11.6 0,6 5.7,0.3 			"/>
+			<polygon class="st3" points="8.5,24.8 0,16.3 0,22 5.7,27.7 			"/>
+			<circle id="Oval" class="st3" cx="9" cy="14" r="2"/>
+			<circle id="Oval_1_" class="st3" cx="15" cy="14" r="2"/>
+			<circle id="Oval_2_" class="st3" cx="21" cy="14" r="2"/>
+		</g>
+	</g>
+</g>
+</svg>
