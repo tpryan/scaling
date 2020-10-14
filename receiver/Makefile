@@ -4,6 +4,7 @@ PROJECT=$(LOADPROJECT)
 REGION=us-central1
 ZONE=us-central1-c
 REDISNAME = load-redis
+VPCNAME = load-redisconnector
 REDISIP=$(shell gcloud beta redis instances describe $(REDISNAME) --region $(REGION) --format='value(host)')
 ENDPOINT=$(shell gcloud run services list --platform managed --format='value(URL)' )
 GKEIP=$(shell gcloud compute addresses list --filter='name=gkeloadip' --format='value(ADDRESS)' )
@@ -63,14 +64,14 @@ gkecreds:
 gke: env gkecreds cloudbuild
 	-kubectl delete service receiver		
 	-kubectl delete deployment receiver
-	kubectl apply -f deployment.yaml
+	kubectl apply -f gke/deployment.yaml
 	kubectl expose deployment receiver --type="NodePort" --port=8080 --target-port=8080 
 
 gkenew: env gkecreds gkeclean cloudbuild
-	kubectl apply -f deployment.yaml
+	kubectl apply -f gke/deployment.yaml
 	kubectl autoscale deployment receiver --cpu-percent=50 --max=150
 	kubectl expose deployment receiver --type="NodePort" --port=8080 --target-port=8080 
-	kubectl apply -f ingress.yaml	
+	kubectl apply -f gke/ingress.yaml	
 
 cluster: env
 	gcloud beta container clusters create "loadcluster" --zone $(ZONE) \
@@ -100,9 +101,9 @@ ips:
 deploy: env clean appengine cloudrun 
 
 printip:
-	@echo CLOUDRUN $(ENDPOINT)/register 
-	@echo REDISIP  $(REDISIP)/register 
-	@echo GKEIP    $(GKEIP)/register 
+	@echo CLOUDRUN $(ENDPOINT) 
+	@echo REDISIP  $(REDISIP) 
+	@echo GKEIP    $(GKEIP) 
 
 schedule:
 	gcloud scheduler jobs create http register-gke --schedule="* * * * *" \
@@ -142,3 +143,30 @@ image:
 	-gcloud compute instances delete $(EXEMPLAR) -q
 	gcloud compute images create $(DISKIMAGE) --family=receiver \
 	--source-disk=$(EXEMPLAR) --source-disk-zone=$(ZONE)	
+
+template: env
+	gcloud beta compute --project=carnivaldemos instance-templates \ 
+	create receiver-template --machine-type=f1-micro \
+	--network-tier=PREMIUM --maintenance-policy=MIGRATE \
+	--tags=http-server --image=receiver-image --image-project=carnivaldemos \
+	--boot-disk-size=200GB --boot-disk-type=pd-standard \
+	--boot-disk-device-name=receiver-template --no-shielded-secure-boot \
+	--shielded-vtpm --shielded-integrity-monitoring --reservation-affinity=any
+
+instancegroup: env
+	gcloud compute instance-groups managed create receiver-group \
+	--base-instance-name=receiver-group --template=receiver-template --size=1 \
+	--zone=us-central1-a
+
+	gcloud beta compute instance-groups managed set-autoscaling "receiver-group" \ 
+	--zone "us-central1-a" --cool-down-period "15" --max-num-replicas "20" \
+	--min-num-replicas "3" --target-cpu-utilization "0.3" --mode "on"		
+
+function: env
+	cd gcf && gcloud functions deploy record --region=$(REGION) --trigger-http \
+	--allow-unauthenticated --entry-point=Record --runtime=go113 --source=. \
+	--vpc-connector=projects/$(PROJECT)/locations/$(REGION)/connectors/$(VPCNAME) \
+	--set-env-vars REDISHOST=$(REDISIP),REDISPORT=6379,SCALE_ENV=GCF,ENDPOINT=https://$(REGION)-$(PROJECT).cloudfunctions.net/record 
+
+
+	
