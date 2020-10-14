@@ -1,0 +1,11 @@
+# github.com/gomodule/redigo v1.8.2
+## explicit
+github.com/gomodule/redigo/redis
+# github.com/teris-io/shortid v0.0.0-20171029131806-771a37caa5cf
+## explicit
+github.com/teris-io/shortid
+# github.com/tpryan/scaling v0.0.0-20201014220231-b715f2533eab => ../
+## explicit
+github.com/tpryan/scaling/apitools
+github.com/tpryan/scaling/caching
+# github.com/tpryan/scaling => ../
