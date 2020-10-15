@@ -123,7 +123,7 @@ function updateInstance(instance){
                 imagePath = "img/cloudrun.svg";
               break;
             case "gke":
-                imagePath = "img/gke.svg";
+                imagePath = "img/kubernetesengine.svg";
               break;  
             case "gce":
                 imagePath = "img/computeengine.svg";
